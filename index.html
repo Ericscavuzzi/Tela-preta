@@ -203,6 +203,10 @@
   var audioCtx = null, analyser = null, stream = null, raf = null, fake = false;
   var historico = [];
   var frame = 0, suave = 0;
+  var ultimaFala = 0;
+  // No celular, abrir o microfone duas vezes (onda + reconhecimento) deixa o
+  // reconhecimento "surdo". Então no celular a onda anima pela atividade da fala.
+  var MOVEL = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   function dimensionar() {
     canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
@@ -245,7 +249,10 @@
       var rms = Math.sqrt(soma / dados.length);
       return Math.min(1, rms * 3.2);
     }
-    return ativo ? Math.random() * 0.7 : 0;
+    if (!ativo) return 0;
+    // sem acesso direto ao mic: barras reagem à chegada de resultados da fala
+    var falando = (Date.now() - ultimaFala) < 900;
+    return falando ? 0.18 + Math.random() * 0.62 : 0.02 + Math.random() * 0.06;
   }
 
   function loop() {
@@ -263,6 +270,11 @@
     historico = [];                       // nova gravação começa limpa
     suave = 0;
     if (raf) cancelAnimationFrame(raf);
+    if (MOVEL) {                          // celular: reconhecimento tem prioridade no mic
+      fake = true;
+      loop();
+      return;
+    }
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
         stream = s;
@@ -356,6 +368,7 @@
     r.continuous = true;
     r.interimResults = true;
     r.onresult = function (e) {
+      ultimaFala = Date.now();
       var parcial = '';
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var t = e.results[i][0].transcript;
@@ -373,10 +386,22 @@
         parar();
         status.style.display = 'block';
         status.textContent = 'Permita o acesso ao microfone nas configurações do navegador.';
+      } else if (e.error === 'audio-capture') {
+        parar();
+        status.style.display = 'block';
+        status.textContent = 'Não consegui acessar o microfone. Feche outros apps que estejam usando ele e tente de novo.';
+      } else if (e.error === 'network') {
+        status.style.display = 'block';
+        status.textContent = 'Sem conexão com o serviço de voz. Verifique a internet.';
       }
+      // 'no-speech' e 'aborted' são normais: o reconhecimento religa sozinho
     };
     r.onend = function () {
-      if (ativo) { try { r.start(); } catch (err) {} }
+      if (ativo) {
+        setTimeout(function () {
+          if (ativo) { try { r.start(); } catch (err) {} }
+        }, 250);
+      }
     };
     return r;
   }
@@ -456,6 +481,6 @@
   });
 })();
 </script>
-<span style="display:none">versao-10-whatsapp</span>
+<span style="display:none">versao-11-fix-mic</span>
 </body>
 </html>
