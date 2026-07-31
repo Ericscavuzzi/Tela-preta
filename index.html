@@ -21,9 +21,9 @@
     display: flex;
     flex-direction: column;
   }
-  /* ── Grade de 4 quadrados (metade de cima) ── */
+  /* ── Grade de 4 quadrados ── */
   #grade {
-    height: 48%;
+    height: 46%;
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
@@ -36,37 +36,33 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 64px;
+    font-size: 60px;
     font-weight: 700;
     user-select: none;
   }
-  /* 1 = inferior direito, 2 = inferior esquerdo, 3 = superior esquerdo, 4 = superior direito */
   #q3 { grid-column: 1; grid-row: 1; background: #21a55e; color: #ffffff; }
   #q4 { grid-column: 2; grid-row: 1; background: #f5c518; color: #000000; }
   #q2 { grid-column: 1; grid-row: 2; background: #2f6fed; color: #ffffff; }
   #q1 { grid-column: 2; grid-row: 2; background: #e0243c; color: #ffffff; }
 
-  /* ── Painel: retângulo de botões (sob o 2) + onda sonora ao lado ── */
+  /* ── Retângulo estilo WhatsApp: mic + onda gravada ── */
   #painel {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 6px 4px;
+    padding: 10px 8px 2px;
     flex-shrink: 0;
   }
   #caixaBotoes {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     background: #141418;
     border: 1px solid #33333b;
-    border-radius: 16px;
-    padding: 10px 14px;
-    width: 100%;          /* retângulo inteiro, com a onda dentro */
+    border-radius: 24px;
+    padding: 8px 14px;
+    width: 100%;
   }
   #mic {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     border: 2px solid #ffffff;
     background: #000000;
@@ -77,7 +73,7 @@
     transition: background .2s, border-color .2s;
     flex-shrink: 0;
   }
-  #mic svg { width: 24px; height: 24px; fill: #ffffff; }
+  #mic svg { width: 22px; height: 22px; fill: #ffffff; }
   #mic.gravando {
     background: #e0243c;
     border-color: #e0243c;
@@ -85,16 +81,33 @@
   }
   @keyframes pulso {
     0%   { box-shadow: 0 0 0 0 rgba(224,36,60,.55); }
-    70%  { box-shadow: 0 0 0 14px rgba(224,36,60,0); }
+    70%  { box-shadow: 0 0 0 12px rgba(224,36,60,0); }
     100% { box-shadow: 0 0 0 0 rgba(224,36,60,0); }
   }
   #onda {
     flex: 1;
-    height: 56px;
+    height: 46px;
     min-width: 0;
   }
+  #tempo {
+    font-size: 13px;
+    color: #8a8a93;
+    flex-shrink: 0;
+    min-width: 38px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
 
-  /* ── Mensagem remota + transcrição ── */
+  /* ── Idioma detectado ── */
+  #idioma {
+    padding: 6px 18px 0;
+    font-size: 12px;
+    color: #8a8a93;
+    flex-shrink: 0;
+  }
+  #idioma b { color: #c9c9d2; font-weight: 600; }
+
+  /* ── Mensagem remota ── */
   #mensagem {
     display: none;
     margin: 8px 14px 0;
@@ -106,17 +119,25 @@
     color: #ffffff;
     background: #16161c;
   }
-  #texto {
+
+  /* ── Célula editável da transcrição ── */
+  #celula {
     flex: 1;
-    overflow-y: auto;
-    padding: 10px 18px 18px;
+    margin: 8px 14px 14px;
+    padding: 14px 16px;
+    border: 1px solid #33333b;
+    border-radius: 14px;
+    background: #0e0e12;
     font-size: 20px;
     line-height: 1.5;
+    overflow-y: auto;
     word-wrap: break-word;
+    outline: none;
   }
-  #texto .parcial { color: #6e6e78; }
-  #texto:empty::before {
-    content: "O que você falar aparece aqui…";
+  #celula:focus { border-color: #5a5a68; }
+  #celula .parcial { color: #6e6e78; }
+  #celula:empty::before {
+    content: "O que você falar aparece aqui — toque pra editar…";
     color: #3a3a42;
     font-size: 15px;
   }
@@ -154,70 +175,93 @@
         <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
       </button>
       <canvas id="onda"></canvas>
+      <span id="tempo">0:00</span>
     </div>
   </div>
+  <div id="idioma">Idioma: <b id="idiomaNome">—</b></div>
   <div id="aviso"></div>
   <div id="mensagem"></div>
-  <div id="texto"></div>
+  <div id="celula" contenteditable="true" spellcheck="false"></div>
 <script>
 (function () {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var texto = document.getElementById('texto');
+  var celula = document.getElementById('celula');
   var mic = document.getElementById('mic');
   var aviso = document.getElementById('aviso');
   var status = document.getElementById('status');
+  var tempoEl = document.getElementById('tempo');
+  var idiomaNome = document.getElementById('idiomaNome');
   var finalTexto = '';
   var ativo = false;
   var rec = null;
+  var inicioGravacao = 0;
+  var cronometro = null;
 
-  /* ── Onda sonora ── */
+  /* ── Onda estilo WhatsApp (histórico de barras que fica gravado) ── */
   var canvas = document.getElementById('onda');
   var ctx2d = canvas.getContext('2d');
   var audioCtx = null, analyser = null, stream = null, raf = null, fake = false;
-  var alturas = [];
+  var historico = [];
+  var frame = 0, suave = 0;
 
   function dimensionar() {
     canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
     canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
+    desenhar();
   }
   window.addEventListener('resize', dimensionar);
 
-  function desenharBarras(niveis) {
-    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-    var n = niveis.length;
-    var larg = canvas.width / n;
-    var meio = canvas.height / 2;
-    ctx2d.fillStyle = '#ffffff';
-    for (var i = 0; i < n; i++) {
-      var h = Math.max(canvas.height * 0.04, niveis[i] * canvas.height * 0.9);
-      var x = i * larg + larg * 0.25;
-      ctx2d.fillRect(x, meio - h / 2, larg * 0.5, h);
+  function desenhar() {
+    var dpr = window.devicePixelRatio || 1;
+    var W = canvas.width, H = canvas.height, meio = H / 2;
+    ctx2d.clearRect(0, 0, W, H);
+    var larg = 3 * dpr, gap = 2.5 * dpr, passo = larg + gap;
+    var maxBarras = Math.floor(W / passo);
+    var barras = historico.slice(-maxBarras);
+    ctx2d.fillStyle = '#d7d7de';
+    for (var i = 0; i < barras.length; i++) {
+      var h = Math.max(3 * dpr, barras[i] * H * 0.92);
+      var x = W - (barras.length - i) * passo;   // preenche da direita pra esquerda, rolando
+      var y = meio - h / 2;
+      if (ctx2d.roundRect) {
+        ctx2d.beginPath();
+        ctx2d.roundRect(x, y, larg, h, larg / 2);
+        ctx2d.fill();
+      } else {
+        ctx2d.fillRect(x, y, larg, h);
+      }
     }
   }
 
-  function loop() {
-    var N = 28;
-    var niveis = [];
+  function nivelAtual() {
     if (analyser && !fake) {
-      var dados = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(dados);
-      for (var i = 0; i < N; i++) {
-        var idx = Math.floor(i * dados.length / N);
-        niveis.push(dados[idx] / 255);
+      var dados = new Uint8Array(analyser.fftSize);
+      analyser.getByteTimeDomainData(dados);
+      var soma = 0;
+      for (var i = 0; i < dados.length; i++) {
+        var v = (dados[i] - 128) / 128;
+        soma += v * v;
       }
-    } else {
-      for (var j = 0; j < N; j++) {
-        var alvo = ativo ? Math.random() * 0.8 : 0;
-        alturas[j] = (alturas[j] || 0) * 0.7 + alvo * 0.3;
-        niveis.push(alturas[j]);
-      }
+      var rms = Math.sqrt(soma / dados.length);
+      return Math.min(1, rms * 3.2);
     }
-    desenharBarras(niveis);
+    return ativo ? Math.random() * 0.7 : 0;
+  }
+
+  function loop() {
+    suave = suave * 0.6 + nivelAtual() * 0.4;
+    frame++;
+    if (frame % 4 === 0) {               // uma barra nova a cada ~66ms, como no WhatsApp
+      historico.push(suave);
+      if (historico.length > 4000) historico = historico.slice(-2000);
+    }
+    desenhar();
     raf = requestAnimationFrame(loop);
   }
 
   function ligarOnda() {
-    dimensionar();
+    historico = [];                       // nova gravação começa limpa
+    suave = 0;
     if (raf) cancelAnimationFrame(raf);
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
@@ -226,8 +270,8 @@
         if (audioCtx.state === 'suspended') audioCtx.resume();
         var src = audioCtx.createMediaStreamSource(s);
         analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
-        analyser.smoothingTimeConstant = 0.6;
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.5;
         src.connect(analyser);
         fake = false;
         loop();
@@ -242,12 +286,43 @@
     if (raf) { cancelAnimationFrame(raf); raf = null; }
     if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
     analyser = null;
-    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
-    desenharBarras(new Array(28).fill(0));
+    desenhar();                           // a onda gravada FICA na tela, como no WhatsApp
+  }
+
+  /* ── Cronômetro ── */
+  function formatarTempo(seg) {
+    var m = Math.floor(seg / 60), s = seg % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  /* ── Detecção de idioma (pelo texto transcrito) ── */
+  var IDIOMAS = {
+    'Português': ['que','não','nao','de','o','a','e','eu','você','voce','está','esta','com','para','uma','isso','sim','muito','bom','dia','fazer','pra','já','ja','então','entao','também','tambem','obrigado'],
+    'Inglês':    ['the','and','you','is','to','of','it','that','what','this','have','are','for','with','my','your','hello','yes','not','do'],
+    'Espanhol':  ['el','los','las','es','y','en','pero','yo','usted','muy','gracias','hola','cómo','como','está','esta','por','qué','pero','bueno','ahora'],
+    'Francês':   ['le','les','et','je','vous','est','pas','une','dans','pour','avec','bonjour','oui','merci','c’est','tres','très'],
+    'Italiano':  ['che','di','il','non','per','sono','una','ciao','grazie','molto','bene','come','questo','anche'],
+    'Alemão':    ['der','die','das','und','ich','nicht','ist','ein','mit','für','ja','nein','danke','hallo','wie']
+  };
+  function detectarIdioma(txt) {
+    var palavras = txt.toLowerCase().replace(/[.,!?;:]/g, ' ').split(/\s+/).filter(Boolean);
+    if (palavras.length < 3) return null;
+    var melhor = null, melhorPts = 0;
+    for (var nome in IDIOMAS) {
+      var lista = IDIOMAS[nome], pts = 0;
+      for (var i = 0; i < palavras.length; i++) {
+        if (lista.indexOf(palavras[i]) !== -1) pts++;
+      }
+      if (pts > melhorPts) { melhorPts = pts; melhor = nome; }
+    }
+    return (melhorPts / palavras.length >= 0.08) ? melhor : null;
+  }
+  function atualizarIdioma() {
+    var d = detectarIdioma(finalTexto.slice(-400));
+    idiomaNome.textContent = d || '—';
   }
 
   dimensionar();
-  desenharBarras(new Array(28).fill(0));
 
   /* ── Transcrição ── */
   if (!SR) {
@@ -258,16 +333,22 @@
   }
 
   function render(parcial) {
-    texto.innerHTML = '';
-    if (finalTexto) texto.appendChild(document.createTextNode(finalTexto));
+    celula.innerHTML = '';
+    if (finalTexto) celula.appendChild(document.createTextNode(finalTexto));
     if (parcial) {
       var s = document.createElement('span');
       s.className = 'parcial';
       s.textContent = (finalTexto ? ' ' : '') + parcial;
-      texto.appendChild(s);
+      celula.appendChild(s);
     }
-    texto.scrollTop = texto.scrollHeight;
+    celula.scrollTop = celula.scrollHeight;
   }
+
+  // edições manuais na célula viram o novo texto oficial
+  celula.addEventListener('input', function () {
+    finalTexto = celula.innerText.replace(/ /g, ' ').trim();
+    atualizarIdioma();
+  });
 
   function criar() {
     var r = new SR();
@@ -285,6 +366,7 @@
         }
       }
       render(parcial.trim());
+      atualizarIdioma();
     };
     r.onerror = function (e) {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
@@ -301,11 +383,17 @@
 
   function iniciar() {
     status.style.display = 'none';
+    celula.blur();
     rec = rec || criar();
     try { rec.start(); } catch (err) {}
     ativo = true;
     mic.classList.add('gravando');
     ligarOnda();
+    inicioGravacao = Date.now();
+    tempoEl.textContent = '0:00';
+    cronometro = setInterval(function () {
+      tempoEl.textContent = formatarTempo(Math.floor((Date.now() - inicioGravacao) / 1000));
+    }, 500);
   }
 
   function parar() {
@@ -313,12 +401,12 @@
     mic.classList.remove('gravando');
     if (rec) { try { rec.stop(); } catch (err) {} }
     desligarOnda();
+    if (cronometro) { clearInterval(cronometro); cronometro = null; }
   }
 
   mic.addEventListener('click', function () {
     ativo ? parar() : iniciar();
   });
-
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
@@ -368,6 +456,6 @@
   });
 })();
 </script>
-<span style="display:none">versao-9-retangulo</span>
+<span style="display:none">versao-10-whatsapp</span>
 </body>
 </html>
