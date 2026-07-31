@@ -201,8 +201,7 @@
   var canvas = document.getElementById('onda');
   var ctx2d = canvas.getContext('2d');
   var audioCtx = null, analyser = null, stream = null, raf = null, fake = false;
-  var historico = [];
-  var frame = 0, suave = 0;
+  var suave = 0, fase = 0;
   var ultimaFala = 0;
   // No celular, abrir o microfone duas vezes (onda + reconhecimento) deixa o
   // reconhecimento "surdo". Então no celular a onda anima pela atividade da fala.
@@ -215,26 +214,42 @@
   }
   window.addEventListener('resize', dimensionar);
 
+  /* Ondas fluidas sobrepostas (estilo assistente de voz), em verde */
+  var CURVAS = [
+    { freq: 1.0, defas: 0.00, amp: 1.00, cor: 'rgba(37,211,102,0.95)',  esp: 2.0 },
+    { freq: 1.5, defas: 1.10, amp: 0.70, cor: 'rgba(134,239,172,0.70)', esp: 1.6 },
+    { freq: 0.8, defas: 2.30, amp: 0.85, cor: 'rgba(37,211,102,0.50)',  esp: 1.4 },
+    { freq: 2.1, defas: 3.70, amp: 0.50, cor: 'rgba(22,163,74,0.55)',   esp: 1.2 }
+  ];
+
+  function atenuacao(x) {          // envelope: pico no centro, some nas pontas
+    return Math.pow(4 / (4 + Math.pow(x, 4)), 2);
+  }
+
   function desenhar() {
     var dpr = window.devicePixelRatio || 1;
     var W = canvas.width, H = canvas.height, meio = H / 2;
     ctx2d.clearRect(0, 0, W, H);
-    var larg = 3 * dpr, gap = 2.5 * dpr, passo = larg + gap;
-    var maxBarras = Math.floor(W / passo);
-    var barras = historico.slice(-maxBarras);
-    ctx2d.fillStyle = '#d7d7de';
-    for (var i = 0; i < barras.length; i++) {
-      var h = Math.max(3 * dpr, barras[i] * H * 0.92);
-      var x = W - (barras.length - i) * passo;   // preenche da direita pra esquerda, rolando
-      var y = meio - h / 2;
-      if (ctx2d.roundRect) {
-        ctx2d.beginPath();
-        ctx2d.roundRect(x, y, larg, h, larg / 2);
-        ctx2d.fill();
-      } else {
-        ctx2d.fillRect(x, y, larg, h);
+    var ampGlobal = Math.max(0.05, suave);
+    ctx2d.shadowColor = 'rgba(37,211,102,0.55)';
+    ctx2d.shadowBlur = 6 * dpr;
+    for (var c = 0; c < CURVAS.length; c++) {
+      var cv = CURVAS[c];
+      ctx2d.beginPath();
+      ctx2d.lineWidth = cv.esp * dpr;
+      ctx2d.strokeStyle = cv.cor;
+      var passos = 90;
+      for (var i = 0; i <= passos; i++) {
+        var p = i / passos;
+        var x = p * W;
+        var t = p * 4 - 2;         // -2 .. 2, centro no meio do canvas
+        var y = meio + Math.sin(p * Math.PI * 4 * cv.freq + fase * (1 + c * 0.3) + cv.defas)
+                * atenuacao(t) * ampGlobal * cv.amp * meio * 0.9;
+        if (i === 0) ctx2d.moveTo(x, y); else ctx2d.lineTo(x, y);
       }
+      ctx2d.stroke();
     }
+    ctx2d.shadowBlur = 0;
   }
 
   function nivelAtual() {
@@ -256,18 +271,13 @@
   }
 
   function loop() {
-    suave = suave * 0.6 + nivelAtual() * 0.4;
-    frame++;
-    if (frame % 4 === 0) {               // uma barra nova a cada ~66ms, como no WhatsApp
-      historico.push(suave);
-      if (historico.length > 4000) historico = historico.slice(-2000);
-    }
+    suave = suave * 0.75 + nivelAtual() * 0.25;
+    fase += 0.16 + suave * 0.3;          // fala mais alta = onda mais rápida
     desenhar();
     raf = requestAnimationFrame(loop);
   }
 
   function ligarOnda() {
-    historico = [];                       // nova gravação começa limpa
     suave = 0;
     if (raf) cancelAnimationFrame(raf);
     if (MOVEL) {                          // celular: reconhecimento tem prioridade no mic
@@ -298,7 +308,8 @@
     if (raf) { cancelAnimationFrame(raf); raf = null; }
     if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
     analyser = null;
-    desenhar();                           // a onda gravada FICA na tela, como no WhatsApp
+    suave = 0;
+    desenhar();                           // em repouso: linhas verdes quase planas
   }
 
   /* ── Cronômetro ── */
@@ -481,6 +492,6 @@
   });
 })();
 </script>
-<span style="display:none">versao-11-fix-mic</span>
+<span style="display:none">versao-12-ondas</span>
 </body>
 </html>
