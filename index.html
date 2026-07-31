@@ -160,6 +160,17 @@
   }
   #celula:focus { border-color: #5a5a68; }
   #celula .parcial { color: #6e6e78; }
+  #celula .caret {
+    display: inline-block;
+    width: 3px;
+    height: 1.05em;
+    background: #25d366;
+    margin-left: 2px;
+    border-radius: 2px;
+    vertical-align: text-bottom;
+    animation: piscar 1s steps(1) infinite;
+  }
+  @keyframes piscar { 50% { opacity: 0; } }
   #celula:empty::before {
     content: "O que você falar aparece aqui — toque pra editar…";
     color: #3a3a42;
@@ -406,21 +417,62 @@
     return;
   }
 
-  function render(parcial) {
+  /* ── Texto fluido: as letras surgem suavemente (máquina de escrever) ── */
+  var parcialAtual = '';
+  var exibido = '';
+  var animRaf = null;
+
+  function renderExibido() {
+    if (document.activeElement === celula) return;  // não atropela edição manual
+    var limite = Math.min(exibido.length, finalTexto.length);
     celula.innerHTML = '';
-    if (finalTexto) celula.appendChild(document.createTextNode(finalTexto));
-    if (parcial) {
+    if (limite > 0) celula.appendChild(document.createTextNode(exibido.slice(0, limite)));
+    if (exibido.length > limite) {
       var s = document.createElement('span');
       s.className = 'parcial';
-      s.textContent = (finalTexto ? ' ' : '') + parcial;
+      s.textContent = exibido.slice(limite);
       celula.appendChild(s);
     }
+    if (ativo) {
+      var cr = document.createElement('span');
+      cr.className = 'caret';
+      celula.appendChild(cr);
+    }
     celula.scrollTop = celula.scrollHeight;
+  }
+
+  function alvoAtual() {
+    return finalTexto + (parcialAtual ? (finalTexto ? ' ' : '') + parcialAtual : '');
+  }
+
+  function passoAnimacao() {
+    var alvo = alvoAtual();
+    if (exibido !== alvo) {
+      var i = 0, m = Math.min(exibido.length, alvo.length);
+      while (i < m && exibido.charCodeAt(i) === alvo.charCodeAt(i)) i++;
+      if (i < exibido.length) {
+        exibido = alvo.slice(0, i);            // revisão: volta ao trecho comum na hora
+      } else {
+        var faltam = alvo.length - exibido.length;
+        var passo = Math.min(5, Math.max(1, Math.round(faltam / 12)));
+        exibido = alvo.slice(0, exibido.length + passo);
+      }
+      renderExibido();
+      animRaf = requestAnimationFrame(passoAnimacao);
+    } else {
+      animRaf = null;
+    }
+  }
+
+  function animar() {
+    if (!animRaf) animRaf = requestAnimationFrame(passoAnimacao);
   }
 
   // edições manuais na célula viram o novo texto oficial
   celula.addEventListener('input', function () {
     finalTexto = celula.innerText.replace(/ /g, ' ').trim();
+    parcialAtual = '';
+    exibido = finalTexto;
     atualizarIdioma();
   });
 
@@ -435,12 +487,17 @@
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var t = e.results[i][0].transcript;
         if (e.results[i].isFinal) {
-          finalTexto = (finalTexto ? finalTexto + ' ' : '') + t.trim();
+          var limpo = t.trim();
+          // alguns Androids repetem o mesmo trecho final: ignora duplicatas
+          if (limpo && !finalTexto.endsWith(limpo)) {
+            finalTexto = (finalTexto ? finalTexto + ' ' : '') + limpo;
+          }
         } else {
           parcial += t;
         }
       }
-      render(parcial.trim());
+      parcialAtual = parcial.trim();
+      animar();
       atualizarIdioma();
     };
     r.onerror = function (e) {
@@ -475,6 +532,7 @@
     try { rec.start(); } catch (err) {}
     ativo = true;
     mic.classList.add('gravando');
+    renderExibido();
     ligarOnda();
     inicioGravacao = Date.now();
     tempoEl.textContent = '0:00';
@@ -489,6 +547,9 @@
     if (rec) { try { rec.stop(); } catch (err) {} }
     desligarOnda();
     if (cronometro) { clearInterval(cronometro); cronometro = null; }
+    parcialAtual = '';
+    animar();
+    setTimeout(renderExibido, 400);
   }
 
   mic.addEventListener('click', function () {
@@ -543,6 +604,6 @@
   });
 })();
 </script>
-<span style="display:none">versao-13-telafixa</span>
+<span style="display:none">versao-14-fluido</span>
 </body>
 </html>
