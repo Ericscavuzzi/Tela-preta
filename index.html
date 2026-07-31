@@ -56,28 +56,29 @@
   .quad:active { filter: brightness(1.25); }
   .quad .num { font-size: 22px; font-weight: 600; opacity: .75; }
   .quad .nome { font-size: 24px; font-weight: 700; }
-  /* tela cheia de cada botão */
-  #telaCheia {
-    position: fixed;
-    inset: 0;
+  /* tela expandida: ocupa o espaço dos 4 quadrados, resto da página continua visível */
+  #telaExp {
     display: none;
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    position: relative;
     align-items: center;
     justify-content: center;
-    z-index: 50;
   }
-  #telaCheia.aberta { display: flex; }
-  #telaTitulo { font-size: 46px; font-weight: 700; }
+  #grade.aberta .quad { display: none; }
+  #grade.aberta #telaExp { display: flex; }
+  #telaTitulo { font-size: 40px; font-weight: 700; }
   #voltar {
     position: absolute;
-    top: 16px;
-    left: 16px;
-    width: 46px;
-    height: 46px;
+    top: 10px;
+    left: 10px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     border: 0;
     background: rgba(0,0,0,.28);
     color: inherit;
-    font-size: 22px;
+    font-size: 20px;
     cursor: pointer;
   }
   #q3 { grid-column: 1; grid-row: 1; background: #21a55e; color: #ffffff; }
@@ -232,6 +233,10 @@
     <div class="quad" id="q4"><span class="num">4</span><span class="nome">Referência</span></div>
     <div class="quad" id="q2"><span class="num">2</span><span class="nome">Pensamento</span></div>
     <div class="quad" id="q1"><span class="num">1</span><span class="nome">Eu</span></div>
+    <div id="telaExp">
+      <button id="voltar">←</button>
+      <div id="telaTitulo"></div>
+    </div>
   </div>
   <div id="painel">
     <div id="caixaBotoes">
@@ -247,14 +252,11 @@
   <div id="mensagem"></div>
   <div id="celula" contenteditable="true" spellcheck="false"></div>
   </div><!-- /app -->
-  <div id="telaCheia">
-    <button id="voltar">←</button>
-    <div id="telaTitulo"></div>
-  </div>
 <script>
-/* Navegação: cada quadrado abre sua tela da mesma cor */
+/* Navegação: o quadrado clicado se expande na área dos 4, o resto continua visível */
 (function () {
-  var tela = document.getElementById('telaCheia');
+  var grade = document.getElementById('grade');
+  var tela = document.getElementById('telaExp');
   var titulo = document.getElementById('telaTitulo');
   [1, 2, 3, 4].forEach(function (nq) {
     var q = document.getElementById('q' + nq);
@@ -263,11 +265,11 @@
       tela.style.background = st.backgroundColor;
       tela.style.color = st.color;
       titulo.textContent = q.querySelector('.nome').textContent;
-      tela.classList.add('aberta');
+      grade.classList.add('aberta');
     });
   });
   document.getElementById('voltar').addEventListener('click', function () {
-    tela.classList.remove('aberta');
+    grade.classList.remove('aberta');
   });
 })();
 </script>
@@ -656,6 +658,6 @@
   });
 })();
 </script>
-<span style="display:none">versao-15-botoes</span>
+<span style="display:none">versao-16-expandida</span>
 </body>
 </html>
