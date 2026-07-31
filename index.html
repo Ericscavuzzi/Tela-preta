@@ -118,6 +118,17 @@
     color: #c9c9d2;
     display: none;
   }
+  #mensagem {
+    display: none;
+    margin: 10px 14px 0;
+    padding: 12px 14px;
+    border: 1px solid #33333b;
+    border-radius: 12px;
+    font-size: 22px;
+    line-height: 1.4;
+    color: #ffffff;
+    background: #16161c;
+  }
 </style>
 </head>
 <body>
@@ -129,6 +140,7 @@
     <div class="quad" id="q1">1</div>
   </div>
   <div id="aviso"></div>
+  <div id="mensagem"></div>
   <div id="texto"></div>
   <footer>
     <button class="mini" id="limpar" title="Limpar texto">🗑</button>
@@ -229,6 +241,56 @@
   });
 })();
 </script>
-<span style="display:none">versao-6-grade</span>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
+<script>
+(function () {
+  if (typeof mqtt === 'undefined') return; // sem internet pro CDN: página segue funcionando
+  var TOPICO = 'ericscvz/tela-preta-k4d9/estado';
+  var quads = { 1: 'q1', 2: 'q2', 3: 'q3', 4: 'q4' };
+  var msg = document.getElementById('mensagem');
+
+  function corDoTexto(hex) {
+    var h = hex.replace('#', '');
+    if (h.length === 3) h = h.replace(/./g, function (c) { return c + c; });
+    var r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#000000' : '#ffffff';
+  }
+
+  function aplicar(estado) {
+    if (estado.cores) {
+      for (var n in quads) {
+        var cor = estado.cores[n];
+        if (cor) {
+          var el = document.getElementById(quads[n]);
+          el.style.background = cor;
+          el.style.color = corDoTexto(cor);
+        }
+      }
+    }
+    if ('mensagem' in estado) {
+      if (estado.mensagem) {
+        msg.textContent = estado.mensagem;
+        msg.style.display = 'block';
+      } else {
+        msg.style.display = 'none';
+      }
+    }
+  }
+
+  function conectar() {
+    var c = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+      clientId: 'tela-' + Math.random().toString(16).slice(2, 10),
+      clean: true,
+      reconnectPeriod: 3000
+    });
+    c.on('connect', function () { c.subscribe(TOPICO); });
+    c.on('message', function (t, payload) {
+      try { aplicar(JSON.parse(payload.toString())); } catch (e) {}
+    });
+  }
+  conectar();
+})();
+</script>
+<span style="display:none">versao-7-controle</span>
 </body>
 </html>

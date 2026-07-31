@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#111114">
+<title>Controle da Tela</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background: #111114;
+    color: #ffffff;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px 6px;
+  }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  #conexao { font-size: 12px; color: #8a8a93; }
+  #conexao.ok { color: #21a55e; }
+  section { padding: 10px 18px; }
+  .rotulo { font-size: 13px; color: #8a8a93; margin-bottom: 8px; }
+  /* mini-grade espelhando a tela */
+  #grade {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 5px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 300px;
+    margin: 0 auto;
+    background: #000;
+    padding: 5px;
+    border-radius: 14px;
+  }
+  .quad {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 3px solid transparent;
+    cursor: pointer;
+    user-select: none;
+  }
+  .quad.sel { border-color: #ffffff; box-shadow: 0 0 0 2px #000, 0 0 12px rgba(255,255,255,.6); }
+  /* paleta */
+  #paleta {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  .cor {
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    border: 2px solid #2c2c33;
+    cursor: pointer;
+  }
+  /* mensagem */
+  .linha { display: flex; gap: 8px; max-width: 340px; margin: 0 auto; }
+  input {
+    flex: 1;
+    background: #1c1c22;
+    border: 1px solid #33333b;
+    border-radius: 10px;
+    color: #fff;
+    padding: 12px;
+    font-size: 16px;
+  }
+  button {
+    background: #2f6fed;
+    color: #fff;
+    border: 0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button.cinza { background: #2e2e38; }
+  .acoes { display: flex; gap: 8px; max-width: 340px; margin: 10px auto 0; }
+  .acoes button { flex: 1; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Controle da Tela</h1>
+    <span id="conexao">conectando…</span>
+  </header>
+
+  <section>
+    <div class="rotulo">1. Toque num quadrado pra selecionar:</div>
+    <div id="grade">
+      <div class="quad" data-n="3" id="q3">3</div>
+      <div class="quad" data-n="4" id="q4">4</div>
+      <div class="quad" data-n="2" id="q2">2</div>
+      <div class="quad" data-n="1" id="q1">1</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="rotulo">2. Toque numa cor pra pintar o quadrado selecionado:</div>
+    <div id="paleta"></div>
+  </section>
+
+  <section>
+    <div class="rotulo">Mensagem na tela:</div>
+    <div class="linha">
+      <input id="txt" placeholder="Escreva e envie…" maxlength="200">
+      <button id="enviar">Enviar</button>
+    </div>
+    <div class="acoes">
+      <button class="cinza" id="apagarMsg">Apagar mensagem</button>
+      <button class="cinza" id="resetar">Cores originais</button>
+    </div>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
+<script>
+(function () {
+  var TOPICO = 'ericscvz/tela-preta-k4d9/estado';
+  var PADRAO = { 1: '#e0243c', 2: '#2f6fed', 3: '#21a55e', 4: '#f5c518' };
+  var CORES = ['#e0243c', '#2f6fed', '#21a55e', '#f5c518', '#8a3ffc',
+               '#ff7a00', '#00ccd7', '#ff4fa3', '#ffffff', '#000000'];
+  var estado = { cores: { 1: PADRAO[1], 2: PADRAO[2], 3: PADRAO[3], 4: PADRAO[4] }, mensagem: '' };
+  var selecionado = 1;
+  var conexao = document.getElementById('conexao');
+  var client = null;
+
+  function corDoTexto(hex) {
+    var h = hex.replace('#', '');
+    var r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#000000' : '#ffffff';
+  }
+
+  function desenhar() {
+    for (var n = 1; n <= 4; n++) {
+      var el = document.getElementById('q' + n);
+      el.style.background = estado.cores[n];
+      el.style.color = corDoTexto(estado.cores[n]);
+      el.classList.toggle('sel', n === selecionado);
+    }
+  }
+
+  function publicar() {
+    if (client && client.connected) {
+      client.publish(TOPICO, JSON.stringify(estado), { retain: true });
+    }
+  }
+
+  // paleta
+  var paleta = document.getElementById('paleta');
+  CORES.forEach(function (c) {
+    var d = document.createElement('div');
+    d.className = 'cor';
+    d.style.background = c;
+    d.addEventListener('click', function () {
+      estado.cores[selecionado] = c;
+      desenhar();
+      publicar();
+    });
+    paleta.appendChild(d);
+  });
+
+  // seleção de quadrado
+  document.querySelectorAll('.quad').forEach(function (el) {
+    el.addEventListener('click', function () {
+      selecionado = parseInt(el.dataset.n, 10);
+      desenhar();
+    });
+  });
+
+  document.getElementById('enviar').addEventListener('click', function () {
+    var v = document.getElementById('txt').value.trim();
+    if (!v) return;
+    estado.mensagem = v;
+    document.getElementById('txt').value = '';
+    publicar();
+  });
+
+  document.getElementById('apagarMsg').addEventListener('click', function () {
+    estado.mensagem = '';
+    publicar();
+  });
+
+  document.getElementById('resetar').addEventListener('click', function () {
+    estado.cores = { 1: PADRAO[1], 2: PADRAO[2], 3: PADRAO[3], 4: PADRAO[4] };
+    desenhar();
+    publicar();
+  });
+
+  // conexão
+  client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+    clientId: 'ctrl-' + Math.random().toString(16).slice(2, 10),
+    clean: true,
+    reconnectPeriod: 3000
+  });
+  client.on('connect', function () {
+    conexao.textContent = '● conectado';
+    conexao.className = 'ok';
+    client.subscribe(TOPICO); // recebe o estado atual (retido) e mudanças de outros controles
+  });
+  client.on('close', function () {
+    conexao.textContent = 'reconectando…';
+    conexao.className = '';
+  });
+  client.on('message', function (t, payload) {
+    try {
+      var e = JSON.parse(payload.toString());
+      if (e.cores) estado.cores = e.cores;
+      if ('mensagem' in e) estado.mensagem = e.mensagem;
+      desenhar();
+    } catch (err) {}
+  });
+
+  desenhar();
+})();
+</script>
+</body>
+</html>
