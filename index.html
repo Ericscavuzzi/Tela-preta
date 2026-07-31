@@ -46,11 +46,39 @@
   }
   .quad {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: 60px;
-    font-weight: 700;
+    gap: 2px;
     user-select: none;
+    cursor: pointer;
+  }
+  .quad:active { filter: brightness(1.25); }
+  .quad .num { font-size: 22px; font-weight: 600; opacity: .75; }
+  .quad .nome { font-size: 24px; font-weight: 700; }
+  /* tela cheia de cada botão */
+  #telaCheia {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  #telaCheia.aberta { display: flex; }
+  #telaTitulo { font-size: 46px; font-weight: 700; }
+  #voltar {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(0,0,0,.28);
+    color: inherit;
+    font-size: 22px;
+    cursor: pointer;
   }
   #q3 { grid-column: 1; grid-row: 1; background: #21a55e; color: #ffffff; }
   #q4 { grid-column: 2; grid-row: 1; background: #f5c518; color: #000000; }
@@ -200,10 +228,10 @@
   <div id="status"></div>
   <div id="app">
   <div id="grade">
-    <div class="quad" id="q3">3</div>
-    <div class="quad" id="q4">4</div>
-    <div class="quad" id="q2">2</div>
-    <div class="quad" id="q1">1</div>
+    <div class="quad" id="q3"><span class="num">3</span><span class="nome">Fazendo</span></div>
+    <div class="quad" id="q4"><span class="num">4</span><span class="nome">Referência</span></div>
+    <div class="quad" id="q2"><span class="num">2</span><span class="nome">Pensamento</span></div>
+    <div class="quad" id="q1"><span class="num">1</span><span class="nome">Eu</span></div>
   </div>
   <div id="painel">
     <div id="caixaBotoes">
@@ -219,6 +247,30 @@
   <div id="mensagem"></div>
   <div id="celula" contenteditable="true" spellcheck="false"></div>
   </div><!-- /app -->
+  <div id="telaCheia">
+    <button id="voltar">←</button>
+    <div id="telaTitulo"></div>
+  </div>
+<script>
+/* Navegação: cada quadrado abre sua tela da mesma cor */
+(function () {
+  var tela = document.getElementById('telaCheia');
+  var titulo = document.getElementById('telaTitulo');
+  [1, 2, 3, 4].forEach(function (nq) {
+    var q = document.getElementById('q' + nq);
+    q.addEventListener('click', function () {
+      var st = getComputedStyle(q);
+      tela.style.background = st.backgroundColor;
+      tela.style.color = st.color;
+      titulo.textContent = q.querySelector('.nome').textContent;
+      tela.classList.add('aberta');
+    });
+  });
+  document.getElementById('voltar').addEventListener('click', function () {
+    tela.classList.remove('aberta');
+  });
+})();
+</script>
 <script>
 /* Modo tela fixa: mesma proporção do iPhone em qualquer aparelho */
 (function () {
@@ -604,6 +656,6 @@
   });
 })();
 </script>
-<span style="display:none">versao-14-fluido</span>
+<span style="display:none">versao-15-botoes</span>
 </body>
 </html>
