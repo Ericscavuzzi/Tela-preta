@@ -23,13 +23,14 @@
   }
   /* ── Grade de 4 quadrados (metade de cima) ── */
   #grade {
-    height: 50%;
+    height: 48%;
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 6px;               /* as duas retas que dividem */
+    gap: 6px;
     background: #000000;
     padding: 6px;
+    flex-shrink: 0;
   }
   .quad {
     display: flex;
@@ -39,47 +40,45 @@
     font-weight: 700;
     user-select: none;
   }
-  /* numeração: 1 = inferior direito, 2 = inferior esquerdo, 3 = superior esquerdo, 4 = superior direito */
-  #q3 { grid-column: 1; grid-row: 1; background: #21a55e; color: #ffffff; } /* superior esquerdo */
-  #q4 { grid-column: 2; grid-row: 1; background: #f5c518; color: #000000; } /* superior direito */
-  #q2 { grid-column: 1; grid-row: 2; background: #2f6fed; color: #ffffff; } /* inferior esquerdo */
-  #q1 { grid-column: 2; grid-row: 2; background: #e0243c; color: #ffffff; } /* inferior direito */
+  /* 1 = inferior direito, 2 = inferior esquerdo, 3 = superior esquerdo, 4 = superior direito */
+  #q3 { grid-column: 1; grid-row: 1; background: #21a55e; color: #ffffff; }
+  #q4 { grid-column: 2; grid-row: 1; background: #f5c518; color: #000000; }
+  #q2 { grid-column: 1; grid-row: 2; background: #2f6fed; color: #ffffff; }
+  #q1 { grid-column: 2; grid-row: 2; background: #e0243c; color: #ffffff; }
 
-  /* ── Metade de baixo: transcrição ── */
-  #texto {
-    flex: 1;
-    overflow-y: auto;
-    padding: 14px 18px;
-    font-size: 20px;
-    line-height: 1.5;
-    word-wrap: break-word;
+  /* ── Painel: retângulo de botões (sob o 2) + onda sonora ao lado ── */
+  #painel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 6px 4px;
+    flex-shrink: 0;
   }
-  #texto .parcial { color: #6e6e78; }
-  #texto:empty::before {
-    content: "Toque no microfone e fale — o texto aparece aqui…";
-    color: #3a3a42;
-    font-size: 16px;
-  }
-  footer {
+  #caixaBotoes {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 24px;
-    padding: 8px 0 22px;
+    gap: 14px;
+    background: #141418;
+    border: 1px solid #33333b;
+    border-radius: 16px;
+    padding: 10px 14px;
+    width: 50%;           /* fica alinhado sob o quadrado 2 */
+    flex-shrink: 0;
   }
   .mini {
-    width: 46px;
-    height: 46px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     border: 1px solid #33333b;
-    background: #141418;
+    background: #1e1e24;
     color: #b9b9c2;
-    font-size: 18px;
+    font-size: 16px;
     cursor: pointer;
   }
   #mic {
-    width: 68px;
-    height: 68px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     border: 2px solid #ffffff;
     background: #000000;
@@ -88,8 +87,9 @@
     align-items: center;
     justify-content: center;
     transition: background .2s, border-color .2s;
+    flex-shrink: 0;
   }
-  #mic svg { width: 30px; height: 30px; fill: #ffffff; }
+  #mic svg { width: 24px; height: 24px; fill: #ffffff; }
   #mic.gravando {
     background: #e0243c;
     border-color: #e0243c;
@@ -97,8 +97,40 @@
   }
   @keyframes pulso {
     0%   { box-shadow: 0 0 0 0 rgba(224,36,60,.55); }
-    70%  { box-shadow: 0 0 0 18px rgba(224,36,60,0); }
+    70%  { box-shadow: 0 0 0 14px rgba(224,36,60,0); }
     100% { box-shadow: 0 0 0 0 rgba(224,36,60,0); }
+  }
+  #onda {
+    flex: 1;
+    height: 64px;
+    min-width: 0;
+  }
+
+  /* ── Mensagem remota + transcrição ── */
+  #mensagem {
+    display: none;
+    margin: 8px 14px 0;
+    padding: 12px 14px;
+    border: 1px solid #33333b;
+    border-radius: 12px;
+    font-size: 22px;
+    line-height: 1.4;
+    color: #ffffff;
+    background: #16161c;
+  }
+  #texto {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 18px 18px;
+    font-size: 20px;
+    line-height: 1.5;
+    word-wrap: break-word;
+  }
+  #texto .parcial { color: #6e6e78; }
+  #texto:empty::before {
+    content: "O que você falar aparece aqui…";
+    color: #3a3a42;
+    font-size: 15px;
   }
   #status {
     position: fixed;
@@ -118,17 +150,6 @@
     color: #c9c9d2;
     display: none;
   }
-  #mensagem {
-    display: none;
-    margin: 10px 14px 0;
-    padding: 12px 14px;
-    border: 1px solid #33333b;
-    border-radius: 12px;
-    font-size: 22px;
-    line-height: 1.4;
-    color: #ffffff;
-    background: #16161c;
-  }
 </style>
 </head>
 <body>
@@ -139,16 +160,19 @@
     <div class="quad" id="q2">2</div>
     <div class="quad" id="q1">1</div>
   </div>
+  <div id="painel">
+    <div id="caixaBotoes">
+      <button class="mini" id="limpar" title="Limpar texto">🗑</button>
+      <button id="mic" title="Falar">
+        <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+      </button>
+      <button class="mini" id="copiar" title="Copiar texto">⧉</button>
+    </div>
+    <canvas id="onda"></canvas>
+  </div>
   <div id="aviso"></div>
   <div id="mensagem"></div>
   <div id="texto"></div>
-  <footer>
-    <button class="mini" id="limpar" title="Limpar texto">🗑</button>
-    <button id="mic" title="Falar">
-      <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
-    </button>
-    <button class="mini" id="copiar" title="Copiar texto">⧉</button>
-  </footer>
 <script>
 (function () {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -160,6 +184,86 @@
   var ativo = false;
   var rec = null;
 
+  /* ── Onda sonora ── */
+  var canvas = document.getElementById('onda');
+  var ctx2d = canvas.getContext('2d');
+  var audioCtx = null, analyser = null, stream = null, raf = null, fake = false;
+  var alturas = [];
+
+  function dimensionar() {
+    canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
+    canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
+  }
+  window.addEventListener('resize', dimensionar);
+
+  function desenharBarras(niveis) {
+    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+    var n = niveis.length;
+    var larg = canvas.width / n;
+    var meio = canvas.height / 2;
+    ctx2d.fillStyle = '#ffffff';
+    for (var i = 0; i < n; i++) {
+      var h = Math.max(canvas.height * 0.04, niveis[i] * canvas.height * 0.9);
+      var x = i * larg + larg * 0.25;
+      ctx2d.fillRect(x, meio - h / 2, larg * 0.5, h);
+    }
+  }
+
+  function loop() {
+    var N = 28;
+    var niveis = [];
+    if (analyser && !fake) {
+      var dados = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(dados);
+      for (var i = 0; i < N; i++) {
+        var idx = Math.floor(i * dados.length / N);
+        niveis.push(dados[idx] / 255);
+      }
+    } else {
+      for (var j = 0; j < N; j++) {
+        var alvo = ativo ? Math.random() * 0.8 : 0;
+        alturas[j] = (alturas[j] || 0) * 0.7 + alvo * 0.3;
+        niveis.push(alturas[j]);
+      }
+    }
+    desenharBarras(niveis);
+    raf = requestAnimationFrame(loop);
+  }
+
+  function ligarOnda() {
+    dimensionar();
+    if (raf) cancelAnimationFrame(raf);
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+        stream = s;
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        var src = audioCtx.createMediaStreamSource(s);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        analyser.smoothingTimeConstant = 0.6;
+        src.connect(analyser);
+        fake = false;
+        loop();
+      }).catch(function () { fake = true; loop(); });
+    } else {
+      fake = true;
+      loop();
+    }
+  }
+
+  function desligarOnda() {
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    analyser = null;
+    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+    desenharBarras(new Array(28).fill(0));
+  }
+
+  dimensionar();
+  desenharBarras(new Array(28).fill(0));
+
+  /* ── Transcrição ── */
   if (!SR) {
     aviso.style.display = 'block';
     aviso.textContent = 'Este navegador não suporta reconhecimento de voz. Tente abrir no Chrome (Android) ou no Safari (iPhone).';
@@ -215,12 +319,14 @@
     try { rec.start(); } catch (err) {}
     ativo = true;
     mic.classList.add('gravando');
+    ligarOnda();
   }
 
   function parar() {
     ativo = false;
     mic.classList.remove('gravando');
     if (rec) { try { rec.stop(); } catch (err) {} }
+    desligarOnda();
   }
 
   mic.addEventListener('click', function () {
@@ -244,7 +350,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
 <script>
 (function () {
-  if (typeof mqtt === 'undefined') return; // sem internet pro CDN: página segue funcionando
+  if (typeof mqtt === 'undefined') return;
   var TOPICO = 'ericscvz/tela-preta-k4d9/estado';
   var quads = { 1: 'q1', 2: 'q2', 3: 'q3', 4: 'q4' };
   var msg = document.getElementById('mensagem');
@@ -277,20 +383,17 @@
     }
   }
 
-  function conectar() {
-    var c = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
-      clientId: 'tela-' + Math.random().toString(16).slice(2, 10),
-      clean: true,
-      reconnectPeriod: 3000
-    });
-    c.on('connect', function () { c.subscribe(TOPICO); });
-    c.on('message', function (t, payload) {
-      try { aplicar(JSON.parse(payload.toString())); } catch (e) {}
-    });
-  }
-  conectar();
+  var c = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+    clientId: 'tela-' + Math.random().toString(16).slice(2, 10),
+    clean: true,
+    reconnectPeriod: 3000
+  });
+  c.on('connect', function () { c.subscribe(TOPICO); });
+  c.on('message', function (t, payload) {
+    try { aplicar(JSON.parse(payload.toString())); } catch (e) {}
+  });
 })();
 </script>
-<span style="display:none">versao-7-controle</span>
+<span style="display:none">versao-8-onda</span>
 </body>
 </html>
