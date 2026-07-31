@@ -57,24 +57,12 @@
   #caixaBotoes {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 14px;
     background: #141418;
     border: 1px solid #33333b;
     border-radius: 16px;
     padding: 10px 14px;
-    width: 50%;           /* fica alinhado sob o quadrado 2 */
-    flex-shrink: 0;
-  }
-  .mini {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: 1px solid #33333b;
-    background: #1e1e24;
-    color: #b9b9c2;
-    font-size: 16px;
-    cursor: pointer;
+    width: 100%;          /* retângulo inteiro, com a onda dentro */
   }
   #mic {
     width: 56px;
@@ -102,7 +90,7 @@
   }
   #onda {
     flex: 1;
-    height: 64px;
+    height: 56px;
     min-width: 0;
   }
 
@@ -162,13 +150,11 @@
   </div>
   <div id="painel">
     <div id="caixaBotoes">
-      <button class="mini" id="limpar" title="Limpar texto">🗑</button>
       <button id="mic" title="Falar">
         <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
       </button>
-      <button class="mini" id="copiar" title="Copiar texto">⧉</button>
+      <canvas id="onda"></canvas>
     </div>
-    <canvas id="onda"></canvas>
   </div>
   <div id="aviso"></div>
   <div id="mensagem"></div>
@@ -333,18 +319,6 @@
     ativo ? parar() : iniciar();
   });
 
-  document.getElementById('limpar').addEventListener('click', function () {
-    finalTexto = '';
-    render('');
-  });
-
-  document.getElementById('copiar').addEventListener('click', function () {
-    if (!finalTexto) return;
-    if (navigator.clipboard) navigator.clipboard.writeText(finalTexto);
-    var b = document.getElementById('copiar');
-    b.textContent = '✓';
-    setTimeout(function () { b.textContent = '⧉'; }, 1200);
-  });
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
@@ -394,6 +368,6 @@
   });
 })();
 </script>
-<span style="display:none">versao-8-onda</span>
+<span style="display:none">versao-9-retangulo</span>
 </body>
 </html>
