@@ -130,6 +130,16 @@
     height: 46px;
     min-width: 0;
   }
+  #salvar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid #33333b;
+    background: #1e1e24;
+    font-size: 17px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
   #tempo {
     font-size: 13px;
     color: #8a8a93;
@@ -245,6 +255,7 @@
       </button>
       <canvas id="onda"></canvas>
       <span id="tempo">0:00</span>
+      <button id="salvar" title="Salvar no Obsidian">💾</button>
     </div>
   </div>
   <div id="idioma"><span>Idioma: <b id="idiomaNome">—</b></span><button id="modo">tela fixa</button></div>
@@ -265,10 +276,12 @@
       tela.style.background = st.backgroundColor;
       tela.style.color = st.color;
       titulo.textContent = q.querySelector('.nome').textContent;
+      window.__categoria = titulo.textContent;
       grade.classList.add('aberta');
     });
   });
   document.getElementById('voltar').addEventListener('click', function () {
+    window.__categoria = '';
     grade.classList.remove('aberta');
   });
 })();
@@ -609,6 +622,9 @@
   mic.addEventListener('click', function () {
     ativo ? parar() : iniciar();
   });
+
+  window.__obterTexto = function () { return finalTexto; };
+  window.__limparTexto = function () { finalTexto = ''; parcialAtual = ''; exibido = ''; renderExibido(); };
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
@@ -656,8 +672,29 @@
   c.on('message', function (t, payload) {
     try { aplicar(JSON.parse(payload.toString())); } catch (e) {}
   });
+
+  /* Salvar nota → Obsidian (via ponte no computador) */
+  var TOPICO_NOTAS = 'ericscvz/tela-preta-k4d9/notas';
+  var btnSalvar = document.getElementById('salvar');
+  btnSalvar.addEventListener('click', function () {
+    var texto = (window.__obterTexto && window.__obterTexto()) || '';
+    if (!texto.trim()) { feedback('·'); return; }
+    if (!c.connected) { feedback('✗'); return; }
+    var nota = {
+      texto: texto.trim(),
+      categoria: window.__categoria || 'Nota',
+      quando: new Date().toISOString()
+    };
+    c.publish(TOPICO_NOTAS, JSON.stringify(nota), { qos: 1 }, function (err) {
+      feedback(err ? '✗' : '✓');
+    });
+  });
+  function feedback(s) {
+    btnSalvar.textContent = s;
+    setTimeout(function () { btnSalvar.textContent = '💾'; }, 1400);
+  }
 })();
 </script>
-<span style="display:none">versao-16-expandida</span>
+<span style="display:none">versao-17-obsidian</span>
 </body>
 </html>
